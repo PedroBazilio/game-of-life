@@ -13,15 +13,37 @@ type Generation = Coord -> State
 type Grid = [[Int]]
 
 
+-- Verificações de estados
+isAlive :: State -> Bool
+isAlive Alive = True
+isAlive Dead = False
+isAlive Zombie = False
+
+isDead :: State -> Bool
+isDead Alive = False
+isDead Dead = True
+isDead Zombie = False
+
+aliveNeighbors :: Generation -> Coord -> Int
+aliveNeighbors generation coord = length (filter isAlive (map generation (neighbors coord)))
 
 -- Gerando numeros de 1 a 3
 randomValue :: IO Int
 randomValue = randomRIO (1, 3)
 
--- Função para verificar se é vizinho
-adjacent :: Coord -> Coord -> Bool
-adjacent p q | p == q = False
-adjacent (Coord x1 y1) (Coord x2 y2) = abs (x1 - x2) <= 1 && abs (y1 - y2) <= 1
+-- -- Função para pegar vizinhos
+neighbors :: Coord -> [Coord]
+neighbors (Coord x y) =
+  [ Coord (x-1) (y-1)
+  , Coord x (y-1)
+  , Coord (x+1) (y-1)
+  , Coord (x+1) y
+  , Coord (x+1) (y+1)
+  , Coord x (y+1)
+  , Coord (x-1) (y+1)
+  , Coord (x-1) y
+  ]
+
 
 -- Criando matrizes com os tamanhos dados
 generateRandomMatrix :: Int -> Int -> IO Grid
