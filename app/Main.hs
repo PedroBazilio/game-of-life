@@ -1,6 +1,7 @@
 -- module Main (main) where
 import System.Random
 import Control.Monad (replicateM)
+import GHC.Generics (prec)
 
 -- import Lib
 
@@ -11,7 +12,7 @@ data State = Dead | Alive | Zombie deriving (Eq, Show)
 data Coord = Coord Integer Integer deriving (Eq, Show)
 type Generation = Coord -> State
 type Grid = [[Int]]
-
+type Line = [Int]
 
 -- Verificações de estados
 isAlive :: State -> Bool
@@ -51,6 +52,32 @@ generateRandomMatrix numRows numCols = do
     let generateRow = replicateM numCols randomValue
     replicateM numRows generateRow
 
+-- Adicionar linha na matrix
+addLine :: Grid -> Line -> IO Grid
+addLine m line = return (m ++ [line])
+
+-- Ler linha de numeros do terminal
+getLinha :: IO Line
+getLinha = do
+  line <- getLine
+  let nums = map read (words line) :: [Int]
+  return nums
+
+-- Subtração
+calSubtr :: Int -> IO Int
+calSubtr n = return (n - 1)
+
+-- Criar matriz
+creatMatrix :: Int -> Grid -> IO Grid
+creatMatrix numRows matriz = do
+  if numRows <= 0
+    then return matriz
+    else do
+      line <- getLinha
+      matriz <- addLine matriz line
+      numRows <- calSubtr numRows
+      creatMatrix numRows matriz
+
 main :: IO ()
 main = do
     putStrLn "Enter the number of rows: "
@@ -60,5 +87,12 @@ main = do
 
     randomMatrix <- generateRandomMatrix numRows numCols
 
+    putStrLn "Entre com as linhas da matriz:"
+    putStrLn "OBS: utlize espaçamento entre os numeros e aperte enter apos digitar cada linha."
+    m <- creatMatrix numRows []
+
     putStrLn "Random Matrix:"
     mapM_ print randomMatrix
+
+    putStrLn "Leitura:"
+    mapM_ print m
