@@ -25,12 +25,21 @@ isDead Alive = False
 isDead Dead = True
 isDead Zombie = False
 
+isZombie :: State -> Bool
+isZombie Alive = False
+isZombie Dead = False
+isZombie Zombie = True
+
 aliveNeighbors :: Generation -> Coord -> Int
 aliveNeighbors generation coord = length (filter isAlive (map generation (neighbors coord)))
 
--- Gerando numeros de 1 a 3
-randomValue :: IO Int
-randomValue = randomRIO (1, 3)
+deadNeighbors :: Generation -> Coord -> Int
+deadNeighbors generation coord = length (filter isDead (map generation (neighbors coord)))
+
+
+zombieNeighbors :: Generation -> Coord -> Int
+zombieNeighbors generation coord = length (filter isZombie (map generation (neighbors coord)))
+
 
 -- -- Função para pegar vizinhos
 neighbors :: Coord -> [Coord]
@@ -45,12 +54,6 @@ neighbors (Coord x y) =
   , Coord (x-1) y
   ]
 
-
--- Criando matrizes com os tamanhos dados
-generateRandomMatrix :: Int -> Int -> IO Grid
-generateRandomMatrix numRows numCols = do
-    let generateRow = replicateM numCols randomValue
-    replicateM numRows generateRow
 
 -- Adicionar linha na matrix
 addLine :: Grid -> Line -> IO Grid
@@ -82,17 +85,10 @@ main :: IO ()
 main = do
     putStrLn "Enter the number of rows: "
     numRows <- readLn
-    putStrLn "Enter the number of columns: "
-    numCols <- readLn
-
-    randomMatrix <- generateRandomMatrix numRows numCols
 
     putStrLn "Entre com as linhas da matriz:"
     putStrLn "OBS: utlize espaçamento entre os numeros e aperte enter apos digitar cada linha."
     m <- creatMatrix numRows []
-
-    putStrLn "Random Matrix:"
-    mapM_ print randomMatrix
 
     putStrLn "Leitura:"
     mapM_ print m
