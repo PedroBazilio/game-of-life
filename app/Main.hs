@@ -25,20 +25,8 @@ isDead Alive = False
 isDead Dead = True
 isDead Zombie = False
 
-isZombie :: State -> Bool
-isZombie Alive = False
-isZombie Dead = False
-isZombie Zombie = True
-
 aliveNeighbors :: Generation -> Coord -> Int
 aliveNeighbors generation coord = length (filter isAlive (map generation (neighbors coord)))
-
-deadNeighbors :: Generation -> Coord -> Int
-deadNeighbors generation coord = length (filter isDead (map generation (neighbors coord)))
-
-
-zombieNeighbors :: Generation -> Coord -> Int
-zombieNeighbors generation coord = length (filter isZombie (map generation (neighbors coord)))
 
 
 -- -- Função para pegar vizinhos
@@ -89,6 +77,7 @@ main = do
     putStrLn "Entre com as linhas da matriz:"
     putStrLn "OBS: utlize espaçamento entre os numeros e aperte enter apos digitar cada linha."
     m <- creatMatrix numRows []
+
 
     putStrLn "Leitura:"
     mapM_ print m
