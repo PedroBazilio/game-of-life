@@ -1,16 +1,52 @@
--- module Main (main) where
-import Lib
+module Main (main) where
 import GHC.Generics (prec)
-
-import System.Random
-import Control.Monad (replicateM)
 
 -- 1 is alive, 2 is Dead and 3 is Zombie
 data State = Dead | Alive | Zombie deriving (Eq, Show)
 data Coord = Coord Integer Integer deriving (Eq, Show)
+
 type Generation = Coord -> State
 type Grid = [[Int]]
 type Line = [Int]
+
+-- Adicionar linha na matrix
+addLine :: Grid -> Line -> IO Grid
+addLine m linha = return (m ++ [linha])
+
+-- Ler linha de numeros do terminal
+getLinha :: Int -> Int -> IO Line
+getLinha numCols n = do
+    --putStrLn $ "Linha " ++ show n ++ ": "
+    line <- getLine
+    let nums = map read (words line) :: Line
+    if length nums == numCols
+        then return nums
+        else if length nums > numCols
+        then do
+            let newNums = take numCols nums :: Line
+            return newNums
+        else if length nums < 3
+            then do
+                putStrLn "Entrada Invalida, digite novamentea."
+                getLinha numCols n
+            else return nums
+
+-- Subtração
+calSubtr :: Int -> Int
+calSubtr n = n - 1
+
+calSoma :: Int -> Int
+calSoma n = n + 1
+
+-- Construir Matriz
+creatMatrix :: Int -> Int -> Grid -> Int -> IO Grid
+creatMatrix numRows numCols matriz n = do
+    if numRows <= 0
+    then return matriz
+    else do
+        line <- getLinha numCols n
+        matriz <- addLine matriz line
+        creatMatrix (calSubtr numRows) numCols matriz (calSoma n)
 
 -- Verificações de estados
 isAlive :: State -> Bool
@@ -25,7 +61,6 @@ isDead Zombie = False
 
 aliveNeighbors :: Generation -> Coord -> Int
 aliveNeighbors generation coord = length (filter isAlive (map generation (neighbors coord)))
-
 
 -- -- Função para pegar vizinhos
 neighbors :: Coord -> [Coord]
@@ -58,10 +93,5 @@ main = do
   putStrLn " "
   putStrLn "Matriz de Entrada:"
   mapM_ print m
-
-  randomMatrix <- generateRandomMatrix numRows numCols
-  putStrLn " "
-  putStrLn "Random Matrix:"
-  mapM_ print randomMatrix
 
   putStrLn " "
