@@ -6,7 +6,6 @@ data Coord = Coord Int Int deriving (Eq, Show)
 -- V alive, dead, zombie (Utilizado para ir somando o numero total de vizinhos, mortos, vivos e zumbis)
 data V = V Int Int Int deriving (Eq, Show)
 
---type Generation = Coord -> State
 type Line = [Int]
 type Grid = [[Int]]
 
@@ -55,25 +54,16 @@ vizinhos (Coord x y) =
     ]
 
 isAlive :: Int -> Bool
-isAlive x
-    | x == 1 = True
-    | x == 2 = False
-    | x == 3 = False
-    | otherwise = False
+isAlive 1 = True
+isAlive _ = False
 
 isZombie :: Int -> Bool
-isZombie x
-    | x == 1 = False
-    | x == 2 = False
-    | x == 3 = True
-    | otherwise = False
+isZombie 3 = True
+isZombie _ = False
 
 isDead :: Int -> Bool
-isDead x
-    | x == 1 = False
-    | x == 2 = True
-    | x == 3 = False
-    | otherwise = False
+isDead 2 = True
+isDead _ = False
 
 -- Função que retorna o vizinho caso exista
 -- Entrada: Matriz de Entrada, Coordada que deseja ler, numero de linhas e numeros de colunas
@@ -160,13 +150,33 @@ verificaMatriz m mSaida (Coord x y) numRows numCols = do
 -- Entradas: Matriz Inicial, Matriz Resposta Anterior, 
 --          Numero de Interações, Numero de linhas, Numero de colunas
 -- Saida: Matriz totalmente resolvida apos n interações
-startGame :: Grid -> Grid -> Int -> Int -> Int -> IO Grid
-startGame m mResp n numRows numCols = do
-    if (n > 0) && (m /= mResp)
+
+-- startGame :: Grid -> Grid -> Int -> Int -> Int -> IO Grid
+-- startGame m mResp n numRows numCols = do
+--     if (n > 0) && (m /= mResp)
+--         then do
+--             resp <- verificaMatriz m [] (Coord 0 0) numRows numCols
+--             startGame resp m (n-1) numRows numCols
+--         else return m
+
+startGame :: Grid -> Grid -> Int -> Int -> Int -> Int -> IO ()
+startGame m mResp n numRows numCols currentIter = do
+    if (currentIter <= n)
         then do
-            resp <- verificaMatriz m [] (Coord 0 0) numRows numCols
-            startGame resp m (n-1) numRows numCols
-        else return m
+            putStrLn $ "Iteração " ++ show currentIter ++ ":"
+            mResp <- verificaMatriz m [] (Coord 0 0) numRows numCols
+            mapM_ print mResp
+            putStrLn " "
+
+            -- Checa estabilidade
+            if mResp == m
+                then do
+                    putStrLn "System estabilizado."
+                    putStrLn $ "Número de passos até estabilizar: " ++ show currentIter
+                else
+                    startGame mResp mResp n numRows numCols (currentIter + 1)
+        else return ()
+
 
 mExemplo :: Grid
 mExemplo =
@@ -189,10 +199,15 @@ main = do
 
     putStrLn "\n"
 
-    mResp <- startGame mExemplo [] 1 6 6
+    putStrLn "Numero de interacoes: "
+    numInt <- readLn
 
-    putStrLn "Matriz de Saida:"
-    mapM_ print mResp
+    putStrLn " "
+    putStrLn "Iniciando Jogo da Vida..."
+
+    startGame mExemplo mExemplo numInt 6 6 1
+
+    putStrLn "Jogo da Vida finalizado!."
 
     -- COMENTAR PARA NÃO PRECISAR FICAR COLOCANDO OS DADOS TODA HORA
 
@@ -204,8 +219,7 @@ main = do
     --putStrLn "Numero de colunas: "
     --numCols <- readLn
 
-    --putStrLn "Numero de interacoes: "
-    --numInt <- readLn
+
 
     --putStrLn " "
 
