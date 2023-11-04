@@ -26,7 +26,7 @@ getLinha numCols n = do
         then do
             let newNums = take numCols nums :: Line
             return newNums
-        else if length nums < 3
+        else if length nums < numCols
             then do
                 putStrLn "Entrada Invalida, digite novamentea."
                 getLinha numCols n
