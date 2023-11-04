@@ -1,244 +1,212 @@
 module Main (main) where
-import GHC.Generics (prec)
 
--- 1 is alive, 2 is Dead and 3 is Zombie
+-- 1 is Alive
+-- 2 is Dead
+-- 3 is Zombie
+
 data Coord = Coord Int Int deriving (Eq, Show)
--- V alive, dead, zombie (Utilizado para ir somando o numero total de vizinhos, mortos, vivos e zumbis)
-data V = V Int Int Int deriving (Eq, Show)
+data Inspection = Inspection Int Int Int deriving (Eq, Show)
+data Answer = Answer Grid Int deriving (Eq, Show)
 
-type Line = [Int]
+type Cell = Int
+type Row = [Int]
 type Grid = [[Int]]
+type NumCols = Int
+type NumRows = Int
 
--- Adicionar linha na matrix
-addLine :: Grid -> Line -> IO Grid
-addLine m linha = return (m ++ [linha])
+-- Função para pegar a matriz final do dado Answer
+getGrid :: Answer -> Grid
+getGrid (Answer grid num) = grid
 
--- Ler linha de numeros do terminal
-getLinha :: Int -> Int -> IO Line
-getLinha numCols n = do
-    --putStrLn $ "Linha " ++ show n ++ ": "
-    line <- getLine
-    let nums = map read (words line) :: Line
-    if length nums == numCols
-        then return nums
-        else if length nums > numCols
-        then do
-            let newNums = take numCols nums :: Line
-            return newNums
-        else if length nums < numCols
-            then do
-                putStrLn "Entrada Invalida, digite novamentea."
-                getLinha numCols n
-            else return nums
+-- Função para pergar o número de interações do dado Answer
+getN :: Answer -> Int
+getN (Answer grid num) = num
 
--- Construir Matriz
-creatMatrix :: Int -> Int -> Grid -> Int -> IO Grid
-creatMatrix numRows numCols matriz n = do
-    if numRows <= 0
-    then return matriz
+-- Função para pergar a coordernado x do dado Coord
+getCoordX :: Coord -> Int
+getCoordX (Coord x y) = x
+
+-- Função para pegar a coordernada y do dado Coord
+getCoordY :: Coord -> Int
+getCoordY (Coord x y) = y
+
+-- Adiciona linha na matrix
+addRow :: Grid -> Row -> IO Grid
+addRow grid row = return (grid ++ [row])
+
+-- Ler uma linha de numeros do terminal
+getRow :: NumCols -> IO Row
+getRow numCols = do
+  rowInput <- getLine
+  let row = map read (words rowInput) :: Row
+  if length row == numCols
+    && all (< 4) row && all (> 0) row
+      then return row
+      else if length row > numCols &&
+        all (< 4) row && all (> 0) row
+      then do
+        let newRow = take numCols row :: Row
+        return newRow
+      else if length row < numCols ||
+        any (> 3) row || any (< 1) row
+          then do
+            putStrLn "Invalid Input. Try again."
+            getRow numCols
+          else return row
+
+-- Função para construir a matriz
+createGrid :: NumRows -> NumCols -> Grid -> IO Grid
+createGrid numRows numCols grid = do
+    if numRows == 0
+    then return grid
     else do
-        line <- getLinha numCols n
-        matriz <- addLine matriz line
-        creatMatrix (numRows - 1) numCols matriz (n + 1)
+        row <- getRow numCols
+        newGrid <- addRow grid row
+        createGrid (numRows - 1) numCols newGrid
 
-vizinhos :: Coord -> [Coord]
-vizinhos (Coord x y) =
-    [ Coord x (y + 1)
-    , Coord x (y - 1)
-    , Coord (x + 1) y
-    , Coord (x - 1) y
-    , Coord (x - 1) (y - 1)
-    , Coord (x + 1) (y - 1)
-    , Coord (x - 1) (y + 1)
-    , Coord (x + 1) (y + 1)
-    ]
+-- Função para calcular os index dos vizinhos de uma célula
+neighbors :: Coord -> [Coord]
+neighbors (Coord x y) =
+  [ Coord x (y + 1)
+  , Coord x (y - 1)
+  , Coord (x + 1) y
+  , Coord (x - 1) y
+  , Coord (x - 1) (y - 1)
+  , Coord (x + 1) (y - 1)
+  , Coord (x - 1) (y + 1)
+  , Coord (x + 1) (y + 1)
+  ]
 
-isAlive :: Int -> Bool
+-- Função para testar de a célula está viva
+isAlive :: Cell -> Bool
 isAlive 1 = True
 isAlive _ = False
 
-isZombie :: Int -> Bool
+-- Função para verificar se a celula é um zumbi
+isZombie :: Cell -> Bool
 isZombie 3 = True
 isZombie _ = False
 
-isDead :: Int -> Bool
+-- Função para verificar se a célula está morta
+isDead :: Cell -> Bool
 isDead 2 = True
 isDead _ = False
 
--- Função que retorna o vizinho caso exista
--- Entrada: Matriz de Entrada, Coordada que deseja ler, numero de linhas e numeros de colunas
-getVizinho :: Grid -> Coord -> Int -> Int -> IO Int
-getVizinho m (Coord x y) numRows numCols = do
-    if (x < numRows) && (y < numCols) && (x >= 0) && (y >= 0)
-        then return ((m !! x) !! y)
-        else return (-1)
+-- Função para pegar o vizinho
+getNeighbor :: Grid -> Coord -> NumRows -> NumCols -> IO Int
+getNeighbor grid (Coord x y) numRows numCols = do
+  if (x < numRows) && (y < numCols) && (x >= 0) && (y >= 0)
+    then do
+      return ((grid !! x) !! y)
+    else return (-1)
 
--- Função que faz a verificação se o vizinho é vivo, morto ou zumbi
--- Entrada: Matriz de Entrada, Coordernada do Vinho, Numero de linhas, Numero de colunas e V
--- Saida: V
-verificaVizinho :: Grid -> Coord -> Int -> Int -> V -> IO V
-verificaVizinho m (Coord x y) numRows numCols (V a d z) = do
-    r <- getVizinho m (Coord x y) numRows numCols
-    if isAlive r
-        then return (V (a+1) d z)
-        else if isDead r
-            then return (V a (d + 1) z)
-            else if isZombie r
-                then return (V a d (z + 1))
-                else return (V a d z)
+-- Função para checar se o vizinho esta vivo, morto ou é zumbi
+checkNeighbor :: Grid -> Coord -> NumRows -> NumCols -> Inspection -> IO Inspection
+checkNeighbor grid (Coord x y) numRows numCols (Inspection alive dead zombie) = do
+  cell <- getNeighbor grid (Coord x y) numRows numCols
+  if isAlive cell
+    then return (Inspection (alive + 1) dead zombie)
+    else if isDead cell
+      then return (Inspection alive (dead + 1) zombie)
+      else if isZombie cell
+        then return (Inspection alive dead (zombie + 1))
+        else return (Inspection alive dead zombie)
 
--- Função que verifica o resultado final de uma celula, se vai ficar 
---          viva, morte, ou zumbi na proxima interação ou saida
--- Entrada: Celula que esta sendo verificada, Linha de Resposta, V 
--- Saida: Linha de resposta da matriz de resposta
-verificaResultado :: Int -> Line -> V -> IO Line
-verificaResultado c rowResp (V a d z)
-    | isAlive c = if z >= 1
-        then return (rowResp ++ [3])
-        else (if ((a < 2) && (z <= 0)) || ((a > 3) && (z <= 0))
-            then return (rowResp ++ [2])
-            else return (rowResp ++ [1]))
-    | isDead c = if a == 3
-            then return (rowResp ++ [1])
-            else return (rowResp ++ [2])
-    | isZombie c = if a <= 0
-            then return (rowResp ++ [2])
-            else return (rowResp ++ [3])
-    | otherwise = return rowResp
+-- Função para verificar a regra e descobrir qual será o estado da celula na resposta
+checkInspection :: Cell -> Row -> Inspection -> IO Row
+checkInspection cell row (Inspection alive dead zombie)
+  | isAlive cell = if zombie >= 1
+      then return (row ++ [3])
+      else (if ((alive < 2) && (zombie <= 0)) || ((alive > 3) && (zombie <= 0))
+        then return (row ++ [2])
+        else return (row ++ [1]))
+  | isDead cell = if alive == 3
+        then return (row ++ [1])
+        else return (row ++ [2])
+  | isZombie cell = if alive <= 0
+          then return (row ++ [2])
+          else return (row ++ [3])
+  | otherwise = return row
 
--- Função recursiva que verifica os 8 vizinhos possiveis da celula desejada.
--- Entrada: Matriz de Entrada, Lista de coordenadas dos vizinhos para verificar,
---          Numero de linhas, Numero de colunas, v, numero do viziho que esta olhando
--- Saida: Dado (V a d z), onde a é o numero de vizinhos vivos, 
---        d o numero de mortos e z o numero de zumbis
-verificaVizinhos :: Grid -> [Coord] -> Int -> Int -> V -> Int -> IO V
-verificaVizinhos m coords numRows numCols v numV = do
-    if numV < 8
-        then do
-            p <- verificaVizinho m (coords !! numV) numRows numCols v
-            verificaVizinhos m coords numRows numCols p (numV + 1)
-        else return v
+-- Função para dar inicio a verificações dos vizinhos
+checkNeighbors :: Grid -> [Coord] -> NumRows -> NumCols -> Inspection -> Int -> IO Inspection
+checkNeighbors grid coordsNeighbors numRows numCols inspection neighbor = do
+  if neighbor < 8
+    then do
+      newInspection <- checkNeighbor grid (coordsNeighbors !! neighbor) numRows numCols inspection
+      checkNeighbors grid coordsNeighbors numRows numCols newInspection (neighbor + 1)
+    else return inspection
 
--- Função recursa que verifica cada elemente de uma linha da matriz
--- Entrada: Matriz Entrada, Linha da Matriz de Resposta,
---          Coordernada que sera verificada (Sempre só mudara o y), Numero de Linhas
---          Numero de colunas
--- Saida: Linha x completa da matriz de entrada depois das verificações
-verificaColuna :: Grid -> Line -> Coord -> Int -> Int -> IO Line
-verificaColuna m rowResp (Coord x y) numRows numCols = do
-    if y < numCols
-        then do
-            v <- verificaVizinhos m (vizinhos (Coord x y)) numRows numCols (V 0 0 0) 0
-            resp <- verificaResultado ((m !! x) !! y) rowResp v
-            verificaColuna m resp (Coord x (y+1)) numRows numCols
-        else return rowResp
+-- Função que verifica cada célula e inicia a verificação dos vizinhos
+checkCell :: Grid -> Row -> Coord -> NumRows -> NumCols -> IO Row
+checkCell grid row (Coord x y) numRows numCols = do
+  if y < numCols
+    then do
+      inspection <- checkNeighbors grid (neighbors (Coord x y)) numRows numCols (Inspection 0 0 0) 0
+      newRow <- checkInspection ((grid !! x) !! y) row inspection
+      checkCell grid newRow (Coord x (y+1)) numRows numCols
+    else return row
 
--- Função recursiva que verifica a matriz linha por linha
--- Entrada: Matriz de Entrada, Matriz Resposta, 
---          Cordenada da Linha (Sempre será -> Coord [Alguma coisa] 0),
---          Numero de Linhas, Numero de colunas
--- Saida: A matriz totalmente resolvida após uma unica interação
-verificaMatriz :: Grid -> Grid -> Coord -> Int -> Int -> IO Grid
-verificaMatriz m mSaida (Coord x y) numRows numCols = do
-    if x < numRows
-        then do
-            l <- verificaColuna m [] (Coord x y) numRows numCols
-            verificaMatriz m (mSaida ++ [l]) (Coord (x + 1) y) numRows numCols
-        else return mSaida
+-- Função que verifica a matriz
+checkGrid :: Grid -> Grid -> Coord -> NumRows -> NumCols -> IO Grid
+checkGrid grid newGrid (Coord x y) numRows numCols = do
+  if x < numRows
+    then do
+      row <- checkCell grid [] (Coord x y) numRows numCols
+      checkGrid grid (newGrid ++ [row]) (Coord (x + 1) y) numRows numCols
+    else return newGrid
 
--- Função que inicia o Jogo
--- Entradas: Matriz Inicial, Matriz Resposta Anterior, 
---          Numero de Interações, Numero de linhas, Numero de colunas
--- Saida: Matriz totalmente resolvida apos n interações
-
--- startGame :: Grid -> Grid -> Int -> Int -> Int -> IO Grid
--- startGame m mResp n numRows numCols = do
---     if (n > 0) && (m /= mResp)
---         then do
---             resp <- verificaMatriz m [] (Coord 0 0) numRows numCols
---             startGame resp m (n-1) numRows numCols
---         else return m
-
-startGame :: Grid -> Grid -> Int -> Int -> Int -> Int -> IO ()
-startGame m mResp n numRows numCols currentIter = do
-    if (currentIter <= n)
-        then do
-            putStrLn $ "Iteração " ++ show currentIter ++ ":"
-            mResp <- verificaMatriz m [] (Coord 0 0) numRows numCols
-            mapM_ print mResp
-            putStrLn " "
-
-            -- Checa estabilidade
-            if mResp == m
-                then do
-                    putStrLn "System estabilizado."
-                    putStrLn $ "Número de passos até estabilizar: " ++ show currentIter
-                else
-                    startGame mResp mResp n numRows numCols (currentIter + 1)
-        else return ()
-
-
-mExemplo :: Grid
-mExemplo =
-  [
-  [1, 3, 2, 1, 3, 2],
-  [3, 1, 2, 3, 1, 1],
-  [1, 1, 1, 2, 1, 2],
-  [3, 1, 3, 2, 1, 1],
-  [1, 1, 1, 2, 1, 2],
-  [3, 2, 2, 1, 3, 3]
-  ]
+-- Função que inicia o jogo
+startGame :: Grid -> Int -> Int -> NumRows -> NumCols -> IO Answer
+startGame grid numInteractions counter numRows numCols = do
+  if counter <= numInteractions
+    then do
+      answerGrid <- checkGrid grid [] (Coord 0 0) numRows numCols
+      if answerGrid == grid
+        then return (Answer grid counter)
+        else startGame answerGrid numInteractions (counter + 1) numRows numCols
+    else do
+      return (Answer grid numInteractions)
 
 main :: IO ()
 main = do
 
-    putStrLn " "
+  putStrLn " "
+  putStrLn " "
 
-    putStrLn "Matriz de Exemplo:"
-    mapM_ print mExemplo
+  putStrLn "Number of interactions: "
+  numInteractions <- readLn
 
-    putStrLn "\n"
+  putStrLn "\nNumber of rows in the matrix: "
+  numRows <- readLn
 
-    putStrLn "Numero de interacoes: "
-    numInt <- readLn
+  putStrLn "Number of columns in the matrix: "
+  numCols <- readLn
 
-    putStrLn " "
-    putStrLn "Iniciando Jogo da Vida..."
+  putStrLn " "
 
-    startGame mExemplo mExemplo numInt 6 6 1
+  putStrLn "Observation: Insert each line with numbers separated by spaces, \nas shown in the example."
+  putStrLn "Example: 3x3 Matrix\n1 2 1\n2 3 1\n1 1 2\n"
 
-    putStrLn "Jogo da Vida finalizado!."
+  putStrLn "Start inserting the matrix: "
+  grid <- createGrid numRows numCols []
 
-    -- COMENTAR PARA NÃO PRECISAR FICAR COLOCANDO OS DADOS TODA HORA
+  putStrLn "\n"
 
-    putStrLn " "
+  putStrLn "Starting the Game of Life...\n"
 
-    --putStrLn "Numero de linhas: "
-    --numRows <- readLn
+  putStrLn (show numRows ++ "x" ++ show numCols ++" initial matrix:")
+  mapM_ print grid
 
-    --putStrLn "Numero de colunas: "
-    --numCols <- readLn
+  putStrLn " "
 
+  answerGrid <- startGame grid numInteractions 0 numRows numCols
 
+  putStrLn ("Response Matrix after " ++ show (getN answerGrid) ++ " interactions:")
+  mapM_ print (getGrid answerGrid)
 
-    --putStrLn " "
+  putStrLn " "
 
-    --putStrLn "OBS: Insera cada linha de forma verifical\ne os numeros separados por espaço."
-    --putStrLn "Ex:\n1 2 1\n2 3 1\n1 1 2\n"
+  putStrLn "Game of Life Finished!"
 
-    --putStrLn "Insira os dados da matriz: "
-    --m <- creatMatrix numRows numCols [] 1
-
-    putStrLn " "
-
-    --putStrLn "Matriz de Entrada:"
-    --mapM_ print m
-
-    --putStrLn "\n"
-
-    --mResposta <- startGame m [] numInt numRows numCols
-
-    --putStrLn "Matriz de Saida:"
-    --mapM_ print mResposta
-
-    putStrLn " "
+  putStrLn " "
