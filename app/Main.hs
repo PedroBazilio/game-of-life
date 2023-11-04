@@ -1,4 +1,4 @@
-module Main (main) where
+module Main where
 
 -- 1 is Alive
 -- 2 is Dead
