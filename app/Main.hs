@@ -1,6 +1,6 @@
 {-# OPTIONS_GHC -Wno-missing-export-lists #-}
 module Main where
-  
+import Text.Read (readMaybe)
 
 -- 1 is Alive
 -- 2 is Dead
@@ -189,6 +189,7 @@ allEqual (h:t) (Just e)
     | h == e = allEqual t (Just e)
     | otherwise = False
 
+-- Função para ler somente números
 readNumber :: String -> IO Int
 readNumber prompt = do
     putStr prompt
@@ -221,13 +222,13 @@ main = do
   putStrLn "\n"
 
   putStrLn "Number of interactions: "
-  numInteractions <- readLn
+  numInteractions <- readNumber ""
 
   putStrLn "\nNumber of rows in the matrix: "
-  numRows <- readLn
+  numRows <- readNumber ""
 
   putStrLn "Number of columns in the matrix: "
-  numCols <- readLn
+  numCols <- readNumber ""
 
   putStrLn " "
 
