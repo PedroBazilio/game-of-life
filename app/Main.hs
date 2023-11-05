@@ -34,25 +34,33 @@ getCoordY (Coord x y) = y
 addRow :: Grid -> Row -> IO Grid
 addRow grid row = return (grid ++ [row])
 
+-- Verificar se existe algum erro no Input
+inputErro :: [String] -> NumCols -> Bool
+inputErro rowInput numCols = do
+  not (any (< "1") rowInput || any (>"3") rowInput || (length rowInput < numCols))
+
+-- Transforma o input em uma lista de String
+inputToList :: String -> IO [String]
+inputToList input = return (words input)
+
 -- Ler uma linha de numeros do terminal
 getRow :: NumCols -> IO Row
 getRow numCols = do
-  rowInput <- getLine
-  let row = map read (words rowInput) :: Row
-  if length row == numCols
-    && all (< 4) row && all (> 0) row
-      then return row
-      else if length row > numCols &&
-        all (< 4) row && all (> 0) row
-      then do
-        let newRow = take numCols row :: Row
-        return newRow
-      else if length row < numCols ||
-        any (> 3) row || any (< 1) row
+  input <- getLine
+  rowInput <- inputToList input
+  if inputErro rowInput numCols
+    then do
+      let row = map read rowInput :: Row
+      if length row == numCols
+        then return row
+        else if length row > numCols
           then do
-            putStrLn "Invalid Input. Try again."
-            getRow numCols
+            let newRow = take numCols row :: Row
+            return newRow
           else return row
+    else do
+      putStrLn "Invalid Input. Try again."
+      getRow numCols
 
 -- Função para construir a matriz
 createGrid :: NumRows -> NumCols -> Grid -> IO Grid
@@ -112,20 +120,35 @@ checkNeighbor grid (Coord x y) numRows numCols (Inspection alive dead zombie) = 
         then return (Inspection alive dead (zombie + 1))
         else return (Inspection alive dead zombie)
 
+-- Regra se a celula estiver viva
+ifAlive :: Inspection -> Row -> IO Row
+ifAlive (Inspection alive dead zombie) row = do
+  if zombie >= 1
+    then return (row ++ [3])
+    else if ((alive < 2) && (zombie <= 0)) || ((alive > 3) && (zombie <= 0))
+      then return (row ++ [2])
+      else return (row ++ [1])
+
+-- Regra se a celula estiver morta
+ifDead :: Inspection -> Row -> IO Row
+ifDead (Inspection alive dead zombie) row = do
+  if alive == 3
+    then return (row ++ [1])
+    else return (row ++ [2])
+
+-- Regra se a celula for zombi
+ifZombie :: Inspection -> Row -> IO Row
+ifZombie (Inspection alive dead zombie) row = do
+  if alive <= 0
+    then return (row ++ [2])
+    else return (row ++ [3])
+
 -- Função para verificar a regra e descobrir qual será o estado da celula na resposta
 checkInspection :: Cell -> Row -> Inspection -> IO Row
 checkInspection cell row (Inspection alive dead zombie)
-  | isAlive cell = if zombie >= 1
-      then return (row ++ [3])
-      else (if ((alive < 2) && (zombie <= 0)) || ((alive > 3) && (zombie <= 0))
-        then return (row ++ [2])
-        else return (row ++ [1]))
-  | isDead cell = if alive == 3
-        then return (row ++ [1])
-        else return (row ++ [2])
-  | isZombie cell = if alive <= 0
-          then return (row ++ [2])
-          else return (row ++ [3])
+  | isAlive cell = ifAlive (Inspection alive dead zombie) row
+  | isDead cell = ifDead (Inspection alive dead zombie) row
+  | isZombie cell = ifZombie (Inspection alive dead zombie) row
   | otherwise = return row
 
 -- Função para dar inicio a verificações dos vizinhos
@@ -156,23 +179,34 @@ checkGrid grid newGrid (Coord x y) numRows numCols = do
       checkGrid grid (newGrid ++ [row]) (Coord (x + 1) y) numRows numCols
     else return newGrid
 
+-- Função para verificar se todos os elementos de uma lista são iguais
+allEqual :: Eq a => [a] -> Maybe a -> Bool
+allEqual [] _ = True
+allEqual (h:t) Nothing = allEqual t (Just h)
+allEqual (h:t) (Just e)
+    | h == e = allEqual t (Just e)
+    | otherwise = False
+
 -- Função que inicia o jogo
 startGame :: Grid -> Int -> Int -> NumRows -> NumCols -> IO Answer
 startGame grid numInteractions counter numRows numCols = do
   if counter <= numInteractions
     then do
       answerGrid <- checkGrid grid [] (Coord 0 0) numRows numCols
-      if answerGrid == grid
-        then return (Answer grid counter)
-        else startGame answerGrid numInteractions (counter + 1) numRows numCols
+      putStrLn $ "Interaction " ++ show counter ++ "."
+      mapM_ print answerGrid
+      putStrLn " "
+      if allEqual (concat answerGrid) (Just 2)
+        then return (Answer answerGrid counter)
+        else do
+          startGame answerGrid numInteractions (counter + 1) numRows numCols
     else do
       return (Answer grid numInteractions)
 
 main :: IO ()
 main = do
 
-  putStrLn " "
-  putStrLn " "
+  putStrLn "\n"
 
   putStrLn "Number of interactions: "
   numInteractions <- readLn
@@ -200,7 +234,7 @@ main = do
 
   putStrLn " "
 
-  answerGrid <- startGame grid numInteractions 0 numRows numCols
+  answerGrid <- startGame grid numInteractions 1 numRows numCols
 
   putStrLn ("Response Matrix after " ++ show (getN answerGrid) ++ " interactions:")
   mapM_ print (getGrid answerGrid)
