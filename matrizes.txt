@@ -12,6 +12,13 @@ Block (Still Life):
 
 5 x 5
 
+Tub(Still Life)
+2 2 2 2 2
+2 2 1 2 2
+2 1 2 1 2
+2 2 1 2 2
+2 2 2 2 2
+
 Blinker (Period 2 Oscillator)
 1 1 1 1 1
 1 1 2 1 1
