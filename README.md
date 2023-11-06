@@ -22,7 +22,8 @@ O jogo evolui por meio de iterações com base nas seguintes regras:
 ## Como Executar
 
 1. Para executar o programa, certifique-se de ter o Haskell e o Stack ou Cabal instalado. 
-2. Você pode compilar e executar o programa com os seguintes comandos:
+2. Descompate o programa em um diretório de sua escolha. 
+3. Para compilar e executar utilize os seguintes comandos:
 - Obs.: Certifique-se de estar na pasta do projeto.
 #### Stack
 ```sh
