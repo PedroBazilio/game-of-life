@@ -7,7 +7,7 @@ import Text.Read (readMaybe)
 -- 3 is Zombie
 
 data Coord = Coord Int Int deriving (Eq, Show)
-data Inspection = Inspection Int Int Int deriving (Eq, Show)
+data StateNeighbors = StateNeighbors Int Int Int deriving (Eq, Show)
 data Answer = Answer Grid Int deriving (Eq, Show)
 
 type Cell = Int
@@ -23,14 +23,6 @@ getGrid (Answer grid _) = grid
 -- Função para pergar o número de interações do dado Answer
 getN :: Answer -> Int
 getN (Answer _ num) = num
-
--- Função para pergar a coordernado x do dado Coord
-getCoordX :: Coord -> Int
-getCoordX (Coord x _) = x
-
--- Função para pegar a coordernada y do dado Coord
-getCoordY :: Coord -> Int
-getCoordY (Coord _ y) = y
 
 -- Adiciona linha na matrix
 addRow :: Grid -> Row -> IO Grid
@@ -111,20 +103,20 @@ getNeighbor grid (Coord x y) numRows numCols = do
     else return (-1)
 
 -- Função para checar se o vizinho esta vivo, morto ou é zumbi
-checkNeighbor :: Grid -> Coord -> NumRows -> NumCols -> Inspection -> IO Inspection
-checkNeighbor grid (Coord x y) numRows numCols (Inspection alive dead zombie) = do
+checkNeighbor :: Grid -> Coord -> NumRows -> NumCols -> StateNeighbors -> IO StateNeighbors
+checkNeighbor grid (Coord x y) numRows numCols (StateNeighbors alive dead zombie) = do
   cell <- getNeighbor grid (Coord x y) numRows numCols
   if isAlive cell
-    then return (Inspection (alive + 1) dead zombie)
+    then return (StateNeighbors (alive + 1) dead zombie)
     else if isDead cell
-      then return (Inspection alive (dead + 1) zombie)
+      then return (StateNeighbors alive (dead + 1) zombie)
       else if isZombie cell
-        then return (Inspection alive dead (zombie + 1))
-        else return (Inspection alive dead zombie)
+        then return (StateNeighbors alive dead (zombie + 1))
+        else return (StateNeighbors alive dead zombie)
 
 -- Regra se a celula estiver viva
-ifAlive :: Inspection -> Row -> IO Row
-ifAlive (Inspection alive _ zombie) row = do
+ifAlive :: StateNeighbors -> Row -> IO Row
+ifAlive (StateNeighbors alive _ zombie) row = do
   if zombie >= 1
     then return (row ++ [3])
     else if ((alive < 2) && (zombie <= 0)) || ((alive > 3) && (zombie <= 0))
@@ -132,43 +124,43 @@ ifAlive (Inspection alive _ zombie) row = do
       else return (row ++ [1])
 
 -- Regra se a celula estiver morta
-ifDead :: Inspection -> Row -> IO Row
-ifDead (Inspection alive _ _) row = do
+ifDead :: StateNeighbors -> Row -> IO Row
+ifDead (StateNeighbors alive _ _) row = do
   if alive == 3
     then return (row ++ [1])
     else return (row ++ [2])
 
 -- Regra se a celula for zombi
-ifZombie :: Inspection -> Row -> IO Row
-ifZombie (Inspection alive _ _) row = do
+ifZombie :: StateNeighbors -> Row -> IO Row
+ifZombie (StateNeighbors alive _ _) row = do
   if alive <= 0
     then return (row ++ [2])
     else return (row ++ [3])
 
 -- Função para verificar a regra e descobrir qual será o estado da celula na resposta
-checkInspection :: Cell -> Row -> Inspection -> IO Row
-checkInspection cell row (Inspection alive dead zombie)
-  | isAlive cell = ifAlive (Inspection alive dead zombie) row
-  | isDead cell = ifDead (Inspection alive dead zombie) row
-  | isZombie cell = ifZombie (Inspection alive dead zombie) row
+checkStateNeighbors :: Cell -> Row -> StateNeighbors -> IO Row
+checkStateNeighbors cell row (StateNeighbors alive dead zombie)
+  | isAlive cell = ifAlive (StateNeighbors alive dead zombie) row
+  | isDead cell = ifDead (StateNeighbors alive dead zombie) row
+  | isZombie cell = ifZombie (StateNeighbors alive dead zombie) row
   | otherwise = return row
 
 -- Função para dar inicio a verificações dos vizinhos
-checkNeighbors :: Grid -> [Coord] -> NumRows -> NumCols -> Inspection -> Int -> IO Inspection
-checkNeighbors grid coordsNeighbors numRows numCols inspection neighbor = do
+checkNeighbors :: Grid -> [Coord] -> NumRows -> NumCols -> StateNeighbors -> Int -> IO StateNeighbors
+checkNeighbors grid coordsNeighbors numRows numCols stateNeighbors neighbor = do
   if neighbor < 8
     then do
-      newInspection <- checkNeighbor grid (coordsNeighbors !! neighbor) numRows numCols inspection
-      checkNeighbors grid coordsNeighbors numRows numCols newInspection (neighbor + 1)
-    else return inspection
+      newStateNeighbors <- checkNeighbor grid (coordsNeighbors !! neighbor) numRows numCols stateNeighbors
+      checkNeighbors grid coordsNeighbors numRows numCols newStateNeighbors (neighbor + 1)
+    else return stateNeighbors
 
 -- Função que verifica cada célula e inicia a verificação dos vizinhos
 checkCell :: Grid -> Row -> Coord -> NumRows -> NumCols -> IO Row
 checkCell grid row (Coord x y) numRows numCols = do
   if y < numCols
     then do
-      inspection <- checkNeighbors grid (neighbors (Coord x y)) numRows numCols (Inspection 0 0 0) 0
-      newRow <- checkInspection ((grid !! x) !! y) row inspection
+      stateNeighbors <- checkNeighbors grid (neighbors (Coord x y)) numRows numCols (StateNeighbors 0 0 0) 0
+      newRow <- checkStateNeighbors ((grid !! x) !! y) row stateNeighbors
       checkCell grid newRow (Coord x (y+1)) numRows numCols
     else return row
 
