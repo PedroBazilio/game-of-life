@@ -26,17 +26,17 @@ module Lib (
 
 import Text.Read (readMaybe)
 
+data Coord = Coord Int Int deriving (Eq, Show) -- Estrutura para as coordenadas dos vizinhos
+data StateNeighbors = StateNeighbors Int Int Int deriving (Eq, Show) -- Estrutura para armazenemanto dos estados dos vizinhos da celula
+data Answer = Answer Grid Int deriving (Eq, Show) -- Estrutura para retorno da resposta final do jogo
+
 -- 1 is Alive
 -- 2 is Dead
 -- 3 is Zombie
 
-data Coord = Coord Int Int deriving (Eq, Show)
-data StateNeighbors = StateNeighbors Int Int Int deriving (Eq, Show)
-data Answer = Answer Grid Int deriving (Eq, Show)
-
 type Cell = Int
-type Row = [Int]
-type Grid = [[Int]]
+type Row = [Int] -- Estrutura para a linha da matriz
+type Grid = [[Int]] -- Estrutura da matriz
 type NumCols = Int
 type NumRows = Int
 
@@ -48,11 +48,11 @@ getGrid (Answer grid _) = grid
 getN :: Answer -> Int
 getN (Answer _ num) = num
 
--- Adiciona linha na matrix
+-- Adiciona linha na matrix durante a entrada do programa
 addRow :: Grid -> Row -> IO Grid
 addRow grid row = return (grid ++ [row])
 
--- Verificar se existe algum erro no Input
+-- Verificar se existe algum erro no Input do usuario
 inputErro :: [String] -> NumCols -> Bool
 inputErro rowInput numCols = do
   not (any (< "1") rowInput || any (>"3") rowInput || (length rowInput < numCols))
@@ -61,7 +61,7 @@ inputErro rowInput numCols = do
 inputToList :: String -> IO [String]
 inputToList input = return (words input)
 
--- Ler uma linha de numeros do terminal
+-- Ler uma linha de numeros da matriz dada pelo usuario no terminal
 getRow :: NumCols -> IO Row
 getRow numCols = do
   input <- getLine
@@ -80,7 +80,7 @@ getRow numCols = do
       putStrLn "Invalid Input. Try again."
       getRow numCols
 
--- Função para construir a matriz
+-- Função para construir a matriz de entrada fornecida pelo usuario 
 createGrid :: NumRows -> NumCols -> Grid -> IO Grid
 createGrid numRows numCols grid = do
     if numRows == 0
@@ -103,7 +103,7 @@ neighbors (Coord x y) =
   , Coord (x + 1) (y + 1)
   ]
 
--- Função para testar de a célula está viva
+-- Função para testar se a célula está viva
 isAlive :: Cell -> Bool
 isAlive 1 = True
 isAlive _ = False
@@ -118,7 +118,7 @@ isDead :: Cell -> Bool
 isDead 2 = True
 isDead _ = False
 
--- Função para pegar o vizinho
+-- Função para pegar um vizinho
 getNeighbor :: Grid -> Coord -> NumRows -> NumCols -> IO Int
 getNeighbor grid (Coord x y) numRows numCols = do
   if (x < numRows) && (y < numCols) && (x >= 0) && (y >= 0)
@@ -161,7 +161,7 @@ ifZombie (StateNeighbors alive _ _) row = do
     then return (row ++ [2])
     else return (row ++ [3])
 
--- Função para verificar a regra e descobrir qual será o estado da celula na resposta
+-- Função para verificar a regra e descobrir qual será o estado da celula na matriz de saída
 checkStateNeighbors :: Cell -> Row -> StateNeighbors -> IO Row
 checkStateNeighbors cell row (StateNeighbors alive dead zombie)
   | isAlive cell = ifAlive (StateNeighbors alive dead zombie) row
@@ -178,7 +178,7 @@ checkNeighbors grid coordsNeighbors numRows numCols stateNeighbors neighbor = do
       checkNeighbors grid coordsNeighbors numRows numCols newStateNeighbors (neighbor + 1)
     else return stateNeighbors
 
--- Função que verifica cada célula e inicia a verificação dos vizinhos
+-- Função que verifica cada célula de uma linha e inicia a verificação dos vizinhos
 checkCell :: Grid -> Row -> Coord -> NumRows -> NumCols -> IO Row
 checkCell grid row (Coord x y) numRows numCols = do
   if y < numCols
@@ -188,7 +188,7 @@ checkCell grid row (Coord x y) numRows numCols = do
       checkCell grid newRow (Coord x (y+1)) numRows numCols
     else return row
 
--- Função que verifica a matriz
+-- Função que verifica e retorna uma matriz com as celulas atualizadas
 checkGrid :: Grid -> Grid -> Coord -> NumRows -> NumCols -> IO Grid
 checkGrid grid newGrid (Coord x y) numRows numCols = do
   if x < numRows
@@ -205,7 +205,7 @@ allEqual (h:t) (Just e)
     | h == e = allEqual t (Just e)
     | otherwise = False
 
--- Função para ler somente números
+-- Função para ler somente números da entrada do usuario
 readNumber :: String -> IO Int
 readNumber prompt = do
     putStr prompt
@@ -216,7 +216,7 @@ readNumber prompt = do
             putStrLn "Invalid input. Please enter a valid number."
             readNumber prompt
 
--- Função que inicia o jogo
+-- Função que inicia o jogo e calcula o numero de iterações
 startGame :: Grid -> Int -> Int -> NumRows -> NumCols -> IO Answer
 startGame grid numInteractions counter numRows numCols = do
   if counter <= numInteractions
