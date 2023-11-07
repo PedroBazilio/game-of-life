@@ -28,7 +28,7 @@ O jogo evolui por meio de iterações com base nas seguintes regras:
 #### Stack
 ```sh
 stack build
-stack exec exec game-of-life-exe  
+stack exec game-of-life-exe  
 ```
 
 #### Cabal
