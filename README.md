@@ -2,9 +2,9 @@
 
 # Jogo da Vida de Conway
 
-Esta é uma implementação em Haskell adapatada do Jogo da Vida de Conway. Feito para a aula de Linguagens de Programação da Universidade Federal Fluminense(UFF).
+Esta é uma implementação em Haskell adapatada do Jogo da Vida de Conway. Feito para a aula de Linguagens de Programação da Universidade Federal Fluminense (UFF).
 
-Alunos: Pedro Henrique e Barbara
+Alunos: Pedro Henrique e Barbara Carvalho
 
 ## Regras
 
